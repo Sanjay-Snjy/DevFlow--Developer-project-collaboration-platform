@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none">
+  <defs>
+    <linearGradient id="df-bg" x1="0" y1="32" x2="32" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7c5cff"/>
+      <stop offset="100%" stop-color="#4f8dff"/>
+    </linearGradient>
+    <linearGradient id="df-inner" x1="8" y1="24" x2="24" y2="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#c4d9ff" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="#0d111a"/>
+  <path d="M8 7.5h7a7.5 7.5 0 0 1 7.5 7.5v2a7.5 7.5 0 0 1-7.5 7.5H8a1.5 1.5 0 0 1-1.5-1.5V9A1.5 1.5 0 0 1 8 7.5z" stroke="url(#df-bg)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 11.5l5 4.5-5 4.5" stroke="url(#df-inner)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,100 @@
+# DevFlow — full stack via Docker.
+#
+#   docker compose up -d mongodb              # just MongoDB for local dev
+#   docker compose --profile app up -d --build # the whole application
+#
+# Configuration comes from a root `.env` (see `docker compose config` for the
+# effective values). Copy this block into .env and edit as needed:
+#
+#   JWT_SECRET=change-me-to-a-long-random-string
+#   AI_SERVICE_KEY=devflow-ai-shared-secret
+#   CORS_ORIGINS=http://localhost:3000
+#   PUBLIC_API_URL=http://localhost:4000
+#   GITHUB_TOKEN=
+#   GITHUB_CLIENT_ID=
+#   GITHUB_CLIENT_SECRET=
+#   AI_API_KEY=
+#   AI_API_BASE=https://api.openai.com/v1
+#   AI_MODEL=gpt-4o-mini
+#
+# Production: set COOKIE_SECURE=true and TRUST_PROXY=true behind TLS, point
+# MONGODB_URI at Atlas, and set PUBLIC_API_URL/CORS_ORIGINS to real origins.
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: devflow-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: devflow
+    volumes:
+      - devflow-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: devflow-backend
+    restart: unless-stopped
+    profiles: ["app"]
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/devflow}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:4000}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      AI_API_URL: http://python-ai:8000
+      AI_SERVICE_KEY: ${AI_SERVICE_KEY:-devflow-ai-shared-secret}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-90000}
+
+  python-ai:
+    build: ./python-ai
+    container_name: devflow-ai
+    restart: unless-stopped
+    profiles: ["app"]
+    environment:
+      PORT: "8000"
+      AI_PROVIDER: ${AI_PROVIDER:-auto}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_API_BASE: ${AI_API_BASE:-https://api.openai.com/v1}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      AI_SERVICE_KEY: ${AI_SERVICE_KEY:-devflow-ai-shared-secret}
+
+  web:
+    build:
+      context: ./web
+      args:
+        API_PROXY_TARGET: http://backend:4000
+        NEXT_PUBLIC_API_URL: ""
+    container_name: devflow-web
+    restart: unless-stopped
+    profiles: ["app"]
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      # Runtime override for next.config rewrites (same-origin /api + /socket.io proxy).
+      API_PROXY_TARGET: http://backend:4000
+
+volumes:
+  devflow-mongo-data:

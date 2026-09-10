@@ -1,0 +1,19 @@
+{
+  "name": "devflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DevFlow — Developer Project & Collaboration Platform",
+  "scripts": {
+    "setup": "npm --prefix backend install && npm --prefix web install && pip install -r python-ai/requirements.txt",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:web": "npm --prefix web run dev",
+    "dev:ai": "cd python-ai && .venv/Scripts/python -m uvicorn app.main:app --reload --port 8000",
+    "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend test",
+    "typecheck": "npm --prefix backend run typecheck && npm --prefix web run typecheck",
+    "db:up": "docker compose up -d mongodb",
+    "db:down": "docker compose down",
+    "stack:up": "docker compose --profile app up -d --build",
+    "stack:down": "docker compose --profile app down"
+  }
+}
