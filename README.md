@@ -9,7 +9,7 @@ events. No mockups, no fake statistics.
 > Everything in the UI is computed from live MongoDB data. Dragging a card on the
 > board updates the database and broadcasts the change to every connected client.
 
-![DevFlow](https://placehold.co/1200x560/0a0c11/7c5cff?text=DevFlow+%E2%80%94+screenshot+placeholder)
+
 
 ---
 
@@ -40,11 +40,11 @@ events. No mockups, no fake statistics.
 
 | Layer     | Technology |
 |-----------|------------|
-| Frontend  | Next.js 14 (App Router) · React 18 · TypeScript · SWR · Socket.IO client · Recharts · CSS design system |
-| Backend   | Node.js · Express · TypeScript · Zod validation · Socket.IO · JWT (httpOnly cookie) + token-version revocation |
+| Frontend  | Next.js 14  · React 18 · TypeScript · Socket.IO client · CSS  |
+| Backend   | Node.js · Express · TypeScript · Zod validation · Socket.IO · JWT  + token-version revocation |
 | Database  | MongoDB (Mongoose), with indexes and aggregation for analytics |
 | AI        | Python · FastAPI · Pydantic (strict I/O validation) · pluggable LLM provider |
-| Infra     | Docker Compose (MongoDB) · helmet security headers · rate limiting · CORS allow-list |
+| Infra     | Docker Compose (MongoDB) · CORS allow-list |
 
 ## Repository layout
 
