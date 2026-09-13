@@ -19,9 +19,8 @@ import { Activity } from './models/Activity.js';
 import { Notification } from './models/Notification.js';
 import { GithubAccount } from './models/GithubAccount.js';
 import { Counter } from './models/GithubAccount.js';
-import { hashPassword, sha256, randomToken } from './utils/auth.js';
+import { sha256, randomToken } from './utils/auth.js';
 
-const DEMO_PASSWORD = 'Demo1234!';
 const day = 24 * 60 * 60 * 1000;
 const now = Date.now();
 
@@ -71,11 +70,11 @@ async function main() {
   }
 
   // ── Users ────────────────────────────────────────────────────────
-  const passwordHash = await hashPassword(DEMO_PASSWORD);
   const users: Record<string, any> = {};
   for (const u of USERS) {
     users[u.username] = await User.create({
-      name: u.name, username: u.username, email: u.email, passwordHash,
+      name: u.name, username: u.username, email: u.email,
+      passwordHash: `!seed:${u.username}`,
       bio: u.bio ?? '', skills: u.skills ?? [], githubUsername: u.github ?? '', demo: true,
     });
   }
@@ -225,7 +224,7 @@ async function main() {
   console.log('\n────────── DevFlow demo data seeded ──────────');
   console.log('Workspace : Nebula Labs (slug: nebula-labs)');
   console.log('Projects  : DEV, MOB, EC with tasks, issues, comments & sprints');
-  console.log('\nDemo accounts (password for all: Demo1234!)');
+  console.log('\nDemo accounts are seeded as local profiles only — sign in happens through Clerk.');
   for (const u of USERS) console.log(`  ${u.role.padEnd(10)} ${u.email.padEnd(24)} ${u.username}`);
   console.log(`\nPending invitation for taylor.dev@example.com — accept token:`);
   console.log(`  ${inviteToken}`);

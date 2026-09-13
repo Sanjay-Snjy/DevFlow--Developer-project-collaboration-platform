@@ -7,12 +7,13 @@ import { api, register, startTestServer, type TestCtx } from './helpers';
 const MONGODB_URI = process.env.TEST_MONGODB_URI ?? 'mongodb://127.0.0.1:27017/devflow_test';
 // Ensure config/env picks up the test URI (dotenv may have already loaded the production one).
 process.env.MONGODB_URI = MONGODB_URI;
+process.env.AUTH_TEST_MODE = 'true';
 
 let server: Awaited<ReturnType<typeof startTestServer>>['server'];
 const base = { base: '' };
-const alice: TestCtx = { base: '', cookie: '' };
-const bob: TestCtx = { base: '', cookie: '' };
-const carl: TestCtx = { base: '', cookie: '' };
+const alice: TestCtx = { base: '', token: '' };
+const bob: TestCtx = { base: '', token: '' };
+const carl: TestCtx = { base: '', token: '' };
 
 let workspaceId = '';
 let projectId = '';

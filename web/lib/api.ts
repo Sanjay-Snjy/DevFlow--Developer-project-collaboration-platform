@@ -2,7 +2,11 @@
  *  When NEXT_PUBLIC_API_URL is set (e.g. http://localhost:4000) requests go cross-origin.
  *  Either way the Node API lives under /api, which is added here so callers only pass
  *  route paths (e.g. "/auth/me").
+ *
+ *  Auth: Clerk session JWT from the useAuth bridge, sent as a Bearer token on every call.
  */
+import { getAuthToken } from './auth-token';
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 const API_PREFIX = '/api';
 
@@ -24,6 +28,10 @@ export class ApiError extends Error {
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined) };
   if (init.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+
+  const token = await getAuthToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(`${API_BASE}${API_PREFIX}${path}`, { ...init, headers, credentials: 'include' });
 
   let body: unknown = null;

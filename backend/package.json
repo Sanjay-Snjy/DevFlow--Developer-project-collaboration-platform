@@ -14,6 +14,7 @@
     "test": "node --import tsx --test --test-concurrency=1 src/tests/*.test.ts"
   },
   "dependencies": {
+    "@clerk/backend": "^3.17.2",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
+import { useClerk } from '@clerk/nextjs';
 import {
   Bell, Check, ChevronRight, Github, KeyRound, LogOut, Monitor, Moon, Palette,
   Shield, Sun, Trash2, UserRound, Users, Link2, Unplug, Copy,
@@ -139,39 +140,22 @@ function ProfileTab() {
 }
 
 function SecurityTab() {
-  const toast = useToast();
-  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirm: '' });
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const save = async () => {
-    if (form.newPassword.length < 8) return setError('New password must be at least 8 characters');
-    if (form.newPassword !== form.confirm) return setError('Passwords do not match');
-    setBusy(true);
-    setError('');
-    try {
-      await api.post('/me/password', { currentPassword: form.currentPassword, newPassword: form.newPassword });
-      toast.push('success', 'Password updated');
-      setForm({ currentPassword: '', newPassword: '', confirm: '' });
-    } catch (e: any) {
-      setError(errMsg(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <section className="card card-pad">
-      <h3 style={{ marginBottom: 6 }}>Change password</h3>
-      <p className="muted mb" style={{ fontSize: 13 }}>Passwords are hashed with bcrypt and never stored in plain text. Signing out revokes all existing sessions.</p>
-      <div style={{ maxWidth: 420 }}>
-        <Field label="Current password"><Input type="password" value={form.currentPassword} onChange={(e) => setForm((f) => ({ ...f, currentPassword: e.target.value }))} /></Field>
-        <Field label="New password"><Input type="password" value={form.newPassword} onChange={(e) => setForm((f) => ({ ...f, newPassword: e.target.value }))} /></Field>
-        <Field label="Confirm new password"><Input type="password" value={form.confirm} onChange={(e) => setForm((f) => ({ ...f, confirm: e.target.value }))} /></Field>
-        {error && <div className="error-text mb">{error}</div>}
-        <Button variant="primary" disabled={busy || !form.currentPassword} onClick={save}><KeyRound style={{ width: 14 }} /> Update password</Button>
-      </div>
+      <h3 style={{ marginBottom: 6 }}>Account security</h3>
+      <p className="muted mb" style={{ fontSize: 13 }}>
+        Sign-in methods, passwords and two-step verification are managed in your account panel below.
+      </p>
+      <UserProfileLink />
     </section>
+  );
+}
+
+/** Opens Clerk's account management profile in a modal. */
+function UserProfileLink() {
+  const clerk = useClerk();
+  return (
+    <Button variant="primary" onClick={() => clerk.openUserProfile()}><KeyRound style={{ width: 14 }} /> Manage password & sign-in methods</Button>
   );
 }
 
@@ -193,7 +177,7 @@ function AppearanceTab() {
             <span style={{ color: 'var(--accent)' }}>{o.icon}</span>
             <span className="grow">
               <span style={{ fontWeight: 700 }}>{o.label}</span>
-              <span className="row-sub">{o.sub}</span>
+              <span className="row-sub">&nbsp{o.sub}</span>
             </span>
             {mode === o.key && <Check style={{ width: 16, color: 'var(--accent)' }} />}
           </button>

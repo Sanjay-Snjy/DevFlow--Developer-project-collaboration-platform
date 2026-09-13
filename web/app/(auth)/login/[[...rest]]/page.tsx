@@ -1,11 +1,11 @@
-import { SignUp } from '@clerk/nextjs';
+import { SignIn } from '@clerk/nextjs';
 import { AuthCardShell } from '@/components/auth-card-shell';
 
-export default function SignUpPage() {
+export default function LoginPage() {
   return (
-    <AuthCardShell title="Create your account" sub="Start planning with your team in minutes.">
-      <SignUp
-        signInUrl="/login"
+    <AuthCardShell title="Welcome back" sub="Sign in to your DevFlow workspace.">
+      <SignIn
+        signUpUrl="/register"
         fallbackRedirectUrl="/dashboard"
         appearance={{
           elements: {

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Boxes, GitPullRequest, Kanban, Sparkles } from 'lucide-react';
 import { LogoIcon } from '@/components/ui/logo-icon';
 
@@ -6,10 +7,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="auth-wrap">
       <aside className="auth-brand">
         <div>
-          <div className="flex" style={{ gap: 10 }}>
+          <Link href="/" aria-label="Go to landing page" style={{ display: 'flex', alignItems: 'center', gap: 10, width: 'fit-content' }}>
             <LogoIcon size={30} />
             <span className="logo-word">DevFlow</span>
-          </div>
+          </Link>
           <h1 style={{ marginTop: 48 }}>Ship better software, together.</h1>
           <p className="pitch">
             Plan work on Kanban boards, track bugs and sprints, review GitHub activity and turn

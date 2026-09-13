@@ -4,8 +4,18 @@
 #   docker compose --profile app up -d --build # the whole application
 #
 # Configuration comes from a root `.env` (see `docker compose config` for the
-# effective values). Copy this block into .env and edit as needed:
+# effective values). Copy this block into .env and edit as needed.
 #
+# NOTE: none of these are marked required here on purpose. Compose interpolates the
+# whole file before it applies profiles, so a `${VAR:?}` would break the DB-only
+# `docker compose up -d mongodb` command. The `app` services validate their own
+# config instead and refuse to start/build when something is missing.
+#
+#   # Clerk owns sign-in. Get both from dashboard.clerk.com → API Keys.
+#   CLERK_SECRET_KEY=sk_test_...
+#   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+#   # Long random string. Still required: it is the AES key that encrypts stored
+#   # GitHub OAuth tokens, even though JWT-based auth itself was removed.
 #   JWT_SECRET=change-me-to-a-long-random-string
 #   AI_SERVICE_KEY=devflow-ai-shared-secret
 #   CORS_ORIGINS=http://localhost:3000
@@ -51,8 +61,13 @@ services:
       NODE_ENV: production
       PORT: "4000"
       MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/devflow}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      # The API verifies Clerk session JWTs on every request. Validated at boot by
+      # src/config/env.ts — a production boot without it is refused rather than
+      # silently 401-ing every request.
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      # Required by utils/crypto.ts (AES key for stored GitHub tokens), not for auth.
+      # Also validated at boot by src/config/env.ts when NODE_ENV=production.
+      JWT_SECRET: ${JWT_SECRET:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
@@ -84,6 +99,14 @@ services:
       args:
         API_PROXY_TARGET: http://backend:4000
         NEXT_PUBLIC_API_URL: ""
+        # NEXT_PUBLIC_* values are inlined into the client bundle at build time,
+        # so they must be build args as well as run-time env.
+        # Validated by next.config.mjs during the production build.
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
+        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/login}
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/register}
+        NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL:-/dashboard}
+        NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL:-/dashboard}
     container_name: devflow-web
     restart: unless-stopped
     profiles: ["app"]
@@ -95,6 +118,9 @@ services:
       NODE_ENV: production
       # Runtime override for next.config rewrites (same-origin /api + /socket.io proxy).
       API_PROXY_TARGET: http://backend:4000
+      # Needed at runtime by clerkMiddleware to verify sessions server-side.
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
 
 volumes:
   devflow-mongo-data:

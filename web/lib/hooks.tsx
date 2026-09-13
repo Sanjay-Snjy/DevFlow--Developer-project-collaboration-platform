@@ -3,18 +3,32 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR, { useSWRConfig } from 'swr';
+import { useAuth as useClerkAuth } from '@clerk/nextjs';
 import { io, type Socket } from 'socket.io-client';
 import { API_BASE, swrFetcher } from './api';
+import { authKey } from './hooks-auth';
 import type { AuthData, WorkspaceSummary } from './types';
 
-export const authKey = '/auth/me';
+export { authKey };
 
 export function useAuth() {
-  const { data, error, isLoading, mutate } = useSWR<AuthData>(authKey, swrFetcher, {
+  const { isSignedIn, isLoaded } = useClerkAuth();
+  const ready = isLoaded && isSignedIn;
+
+  const { data, error, isLoading, mutate } = useSWR<AuthData>(ready ? authKey : null, swrFetcher, {
     revalidateOnFocus: false,
     errorRetryCount: 1,
   });
-  return { data, error, isLoading, mutate, authed: Boolean(data?.user), user: data?.user ?? null, workspaces: data?.workspaces ?? [] };
+
+  return {
+    data,
+    error,
+    isLoading: isLoaded ? (isSignedIn ? isLoading || (!data && !error) : false) : true,
+    mutate,
+    authed: isLoaded && Boolean(isSignedIn) && Boolean(data?.user),
+    user: data?.user ?? null,
+    workspaces: data?.workspaces ?? [],
+  };
 }
 
 export const WS_KEY = 'df.workspace';
@@ -90,11 +104,12 @@ function keysAffected(event: string, payload: any, apiBase: string): string[] {
 type SocketCtxType = { socket: Socket | null; connected: boolean };
 const SocketCtx = createContext<SocketCtxType>({ socket: null, connected: false });
 
-/** Connects Socket.IO (cookie-authenticated through the Next.js proxy), listens for events and
- *  invalidates the affected SWR caches. Handles reconnection automatically via socket.io-client. */
+/** Connects Socket.IO, authenticating each handshake with a fresh Clerk session JWT, and
+ *  invalidates the affected SWR caches on realtime events. */
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { mutate } = useSWRConfig();
   const { authed } = useAuth();
+  const { getToken } = useClerkAuth();
   const [connected, setConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
@@ -109,6 +124,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       reconnectionDelay: 800,
       reconnectionDelayMax: 6000,
       withCredentials: true,
+      auth: (cb) => {
+        getToken().then((t) => cb({ token: t })).catch(() => cb({ token: null }));
+      },
     });
     socketRef.current = socket;
 

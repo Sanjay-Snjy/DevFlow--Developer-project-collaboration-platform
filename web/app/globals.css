@@ -29,7 +29,12 @@
   --sidebar-w: 204px;
 }
 
-html[data-theme='light'] {
+/* The light token set also applies to the marketing landing page, which is always light
+   regardless of the visitor's saved or system theme. Declaring the properties on `.lp`
+   (a descendant of <html>) means the landing page's whole subtree resolves light tokens
+   even while the document itself carries data-theme="dark". */
+html[data-theme='light'],
+.lp {
   --bg: #f5f6fa;
   --bg-2: #ffffff;
   --bg-3: #ffffff;
@@ -172,6 +177,7 @@ p { margin: 0; }
 .btn-sm { padding: 4px 9px; font-size: 12px; border-radius: 6px; }
 .btn-sm svg { width: 13px; height: 13px; }
 .btn-lg { padding: 10px 18px; font-size: 14px; }
+.btn-xl { padding: 11px 22px; font-size: 14.5px; border-radius: 9px; }
 .btn-icon { padding: 6px; }
 
 /* Form fields */

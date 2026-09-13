@@ -1,10 +1,9 @@
 import type { Server as HttpServer } from 'node:http';
 import { Server, type Socket } from 'socket.io';
 import { env } from './config/env.js';
-import { User } from './models/User.js';
 import { Workspace } from './models/Workspace.js';
 import { Project } from './models/Project.js';
-import { verifyToken } from './utils/auth.js';
+import { extractBearerToken, verifyClerkToken, resolveLocalUser } from './utils/clerkAuth.js';
 
 export let io: Server | null = null;
 
@@ -25,24 +24,22 @@ const cors = {
 /**
  * Attaches Socket.IO to the HTTP server.
  *
- * Authentication: the browser connects through the Next.js proxy (same-origin), so the
- * httpOnly `df_token` cookie rides along on the handshake. Tokens are verified server-side;
- * unauthenticated sockets are rejected. Clients that reconnect transparently re-authenticate
- * with the same cookie.
+ * Authentication: the client passes the Clerk session JWT in the handshake auth payload
+ * (`{ token }`). Tokens are verified against Clerk's JWKS server-side; unauthenticated
+ * sockets are rejected. Clients that reconnect transparently re-authenticate with a fresh
+ * token.
  */
 export function initSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, { cors, path: '/socket.io' });
 
   io.use(async (socket, next) => {
     try {
-      const raw = socket.handshake.auth?.token ?? parseCookie(socket.handshake.headers.cookie ?? '');
+      const raw = socket.handshake.auth?.token;
       const token = typeof raw === 'string' && raw ? raw : null;
-      const payload = token ? verifyToken(token) : null;
-      if (!payload) return next(new Error('unauthorized'));
+      const identity = token ? await verifyClerkToken(token) : null;
+      if (!identity) return next(new Error('unauthorized'));
 
-      const user = await User.findById(payload.sub).select('name username +tokenVersion').lean();
-      if (!user) return next(new Error('unauthorized'));
-      if ((payload.ver ?? 0) !== (user.tokenVersion ?? 0)) return next(new Error('unauthorized'));
+      const { user } = await resolveLocalUser(identity);
 
       (socket as Socket & { data: Record<string, unknown> }).data.userId = String(user._id);
       (socket as Socket & { data: Record<string, unknown> }).data.user = { id: String(user._id), name: user.name, username: user.username };
@@ -92,14 +89,6 @@ export function initSocket(httpServer: HttpServer): Server {
   });
 
   return io;
-}
-
-function parseCookie(header: string): string | null {
-  for (const part of header.split(';')) {
-    const [name, ...rest] = part.trim().split('=');
-    if (name === 'df_token') return rest.join('=');
-  }
-  return null;
 }
 
 export function emitEvent(target: 'user' | 'workspace' | 'project', id: string, event: string, payload: unknown) {

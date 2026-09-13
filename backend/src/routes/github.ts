@@ -3,11 +3,10 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { env, githubConfigured, githubOAuthConfigured } from '../config/env.js';
 import { GithubAccount } from '../models/GithubAccount.js';
-import { User } from '../models/User.js';
 import { github, githubConfiguredFor } from '../services/githubService.js';
 import { ApiError, asyncHandler, ok } from '../utils/errors.js';
 import { encryptSecret, decryptSecret } from '../utils/crypto.js';
-import { randomState, setAuthCookie, signToken } from '../utils/auth.js';
+import { randomState } from '../utils/auth.js';
 import { parseQuery } from '../utils/validate.js';
 import { githubLimiter } from '../middleware/security.js';
 
@@ -103,9 +102,7 @@ router.get(
         { username: login, accessTokenEnc: encryptSecret(token), scopes: [], connectedAt: new Date() },
         { upsert: true, new: true }
       );
-      // Re-issue the app session cookie preserving the user's current tokenVersion.
-      const appUser = await User.findById(entry.userId).select('+tokenVersion').lean();
-      setAuthCookie(res, signToken(entry.userId, appUser?.tokenVersion ?? 0));
+      // Session rides in the Clerk token on the client — no server cookie needed.
       res.redirect(`${frontendOrigin()}/settings?tab=integrations&github=connected&account=${encodeURIComponent(login)}`);
     } catch {
           res.redirect(`${frontendOrigin()}/settings?tab=integrations&github=error&reason=user`);

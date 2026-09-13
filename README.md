@@ -91,6 +91,13 @@ docker compose --profile app exec backend node dist/seed.js   # load demo data o
 Open http://localhost:3000. Configuration is driven by a root `.env` — the
 variables and safe defaults are documented at the top of `docker-compose.yml`.
 
+> **The `app` profile needs the Clerk keys in the root `.env`.** `web/.env.local` is
+excluded from the Docker build context, so the frontend image can only get
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` from the build arg that `docker-compose.yml` reads out of
+`.env`. Without it the web image fails to build with an explicit error, and the backend
+refuses to boot without `CLERK_SECRET_KEY`. `docker compose up -d mongodb` (DB only) never
+needs either.
+
 ### 2. Backend (Node API on :4000)
 
 ```bash
@@ -110,7 +117,14 @@ cp .env.example .env.local       # defaults proxy /api to http://localhost:4000
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in with a demo account.
+> **You must replace the Clerk keys in `web/.env.local`.** Clerk is the only way in, so
+> `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` have to be real values from
+> [dashboard.clerk.com](https://dashboard.clerk.com) → **API Keys**. If the placeholder
+> `pk_test_replace_me` is left in place Clerk never finishes loading, the sign-in buttons
+> on the landing page stay hidden, and `/dashboard` is unreachable. The backend needs the
+> same `CLERK_SECRET_KEY` in `backend/.env`.
+
+Open <http://localhost:3000> and click **Get started** (or **Sign in**).
 
 ### 4. Python AI service (FastAPI on :8000) — optional
 
@@ -125,19 +139,44 @@ cp .env.example .env             # add an LLM provider key if you have one
 The rest of DevFlow runs fine without the AI service or an AI provider — AI buttons
 show a clear “AI features are not configured” message instead of crashing.
 
-### Demo accounts (password for all: `Demo1234!`)
+## Authentication — where do I log in?
 
-| User | Workspace role | Use for |
-|------|----------------|---------|
-| `alex@devflow.demo`  | Owner    | Everything — invite members, manage workspaces |
-| `jordan@devflow.demo`| Admin    | Member & project management |
-| `sam@devflow.demo`   | Developer| Work assigned tasks, comment, move cards |
-| `morgan@devflow.demo`| Viewer   | Read-only checks |
+**Clerk owns all sign-in.** There is no password stored in DevFlow and no `/login` API
+endpoint any more; the Node API only verifies the Clerk session JWT sent as a Bearer token.
 
-Seeded workspaces include **Nebula Labs** with the `DEV` (DevFlow Platform), `MOB`
-(Mobile App) and `EC` (E-Commerce API) projects, plus sprints, issues and comments.
-Seed data is clearly flagged with a **demo data** badge and is never created in
-production automatically.
+| Route | What it is |
+|---|---|
+| `/login` | Sign-in page (Clerk `<SignIn>`), also reachable as `/sign-in` |
+| `/register` | Sign-up page (Clerk `<SignUp>`), also reachable as `/sign-up` |
+| `/` | Landing page — **Get started** / **Sign in** / **Start free** open Clerk's **modal**, no navigation |
+| `/dashboard` | Protected; anonymous visitors are redirected to `/login` |
+
+The landing page never navigates away to authenticate: its CTAs are Clerk's
+`<SignInButton mode="modal">` / `<SignUpButton mode="modal">`, so visitors sign in or sign up
+in a popup and land on `/dashboard`. `/login` and `/register` remain as the fallback target for
+`clerkMiddleware`'s `auth.protect()` when an anonymous visitor opens a protected deep link.
+
+Every other route is protected by `web/middleware.ts`. The redirect target is pinned in code
+(`clerkMiddleware` options + `<ClerkProvider>`), so it does not depend on
+`NEXT_PUBLIC_CLERK_SIGN_IN_URL` being set.
+
+> **`/login` and `/register` must stay catch-all routes.** Clerk's `<SignIn>`/`<SignUp>`
+> throw *"component is not configured correctly"* unless they are rendered from a catch-all
+> segment (hence `app/(auth)/login/[[...rest]]/page.tsx`), and the middleware must treat the
+> whole subtree as public — which is why the public routes use `/login/:path*` rather than an
+> exact `/login` match. Breaking either half re-introduces that error. On first successful sign-in the API
+provisions a local `User` row (matched on verified email, so pre-existing rows are adopted)
+plus a personal workspace. Profile, password and MFA changes are delegated to Clerk via
+**Settings → Security**. Manage users in the [Clerk dashboard](https://dashboard.clerk.com).
+
+### Seeded demo profiles
+
+`npm run seed` creates local *profile* rows (no passwords) in the **Nebula Labs** demo
+workspace — `DEV` (DevFlow Platform), `MOB` (Mobile App) and `EC` (E-Commerce API)
+projects, with sprints, tasks, issues and comments. Because Clerk owns identity, a seeded
+profile becomes yours when you sign up with a Clerk account using that **exact email**;
+otherwise you start with your own personal workspace. The seed never runs automatically and
+never runs in production.
 
 ## Environment variables
 
@@ -146,7 +185,9 @@ production automatically.
 | Variable | Purpose |
 |---|---|
 | `MONGODB_URI` | MongoDB connection string |
-| `JWT_SECRET` | Signs auth tokens (keep secret, rotate often) |
+| `CLERK_SECRET_KEY` | **Required.** Verifies Clerk session JWTs and calls the Clerk Backend API |
+| `AUTH_TEST_MODE` | Test-only: accept `dev_test_` tokens from the test helpers |
+| `JWT_SECRET` | No longer signs auth tokens. Still used as the AES-256 key that encrypts stored GitHub OAuth tokens, so rotating it invalidates those connections |
 | `PORT` | API port (default 4000) |
 | `PUBLIC_API_URL` | Public API origin (used for OAuth callbacks) |
 | `CORS_ORIGINS` | Comma-separated allowed web origins (e.g. `http://localhost:3000`) |
@@ -159,8 +200,11 @@ production automatically.
 | `TRUST_PROXY` | `true` behind a reverse proxy (correct client IPs for rate limiting) |
 | `NODE_ENV` | `production` in production builds (also disables dev-only CSRF origins) |
 
-**web/.env.local** — `NEXT_PUBLIC_API_URL` (leave empty for the same-origin proxy)
-and `API_PROXY_TARGET` (default `http://localhost:4000`).
+**web/.env.local** — `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`
+(**required**, the app cannot authenticate without them), plus `NEXT_PUBLIC_API_URL` (leave
+empty for the same-origin proxy) and `API_PROXY_TARGET` (default `http://localhost:4000`).
+The `NEXT_PUBLIC_CLERK_SIGN_IN_URL` / `_SIGN_UP_URL` / `_FALLBACK_REDIRECT_URL` hints are
+optional and default to `/login`, `/register` and `/dashboard`.
 
 **python-ai/.env** — `AI_PROVIDER` (`auto` / `openai` / `none`), `AI_API_KEY`,
 `AI_API_BASE`, `AI_MODEL`. Any OpenAI-compatible endpoint works (OpenAI, local
@@ -207,13 +251,13 @@ model without touching app code.
 ## Tests & quality
 
 ```bash
-cd backend && npm test      # 20 integration tests: auth, logout revocation, RBAC, task/issue + comment lifecycle flows
+cd backend && npm test      # 22 integration tests: clerk-first-sight provisioning, RBAC, task/issue + comment lifecycle flows
 cd web && npm run typecheck # tsc --noEmit
 cd web && npm run build     # production build incl. prerender of all routes
 ```
 
-Security: bcrypt password hashing, httpOnly JWT cookie with per-user token version
-(instant logout revocation), Zod input validation everywhere, workspace/project
+Security: Clerk owns password hashing, MFA and session revocation (the API re-checks the
+session is still active on every request), Zod input validation everywhere, workspace/project
 authorization middleware, per-route RBAC checks server-side, helmet headers, CORS
 allow-list, rate limiters (API + AI + GitHub) and no secrets in the client bundle.
 

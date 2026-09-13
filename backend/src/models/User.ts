@@ -14,12 +14,15 @@ const userSchema = new Schema(
       match: /^[a-z0-9_]{2,24}$/,
     },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    // Clerk user id — the real identity. Passwords live in Clerk, not here.
+    clerkUserId: { type: String, index: true, default: null },
+    // Legacy field kept for old rows; new users get a '!clerk:<id>' placeholder.
     passwordHash: { type: String, required: true, select: false },
     avatarUrl: { type: String, default: '', maxlength: 1000 },
     bio: { type: String, default: '', maxlength: 600 },
     skills: { type: [String], default: [] },
     githubUsername: { type: String, default: '' },
-    tokenVersion: { type: Number, default: 0, select: false },
+    tokenVersion: { type: Number, default: 0, select: false }, // deprecated — kept for old rows
     notificationPrefs: {
       taskAssigned: { type: Boolean, default: true },
       mentions: { type: Boolean, default: true },

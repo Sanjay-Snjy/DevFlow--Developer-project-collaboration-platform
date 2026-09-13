@@ -6,10 +6,11 @@ import { api, register, startTestServer, type TestCtx } from './helpers';
 
 const MONGODB_URI = process.env.TEST_MONGODB_URI ?? 'mongodb://127.0.0.1:27017/devflow_test';
 process.env.MONGODB_URI = MONGODB_URI;
+process.env.AUTH_TEST_MODE = 'true';
 
 let server: Awaited<ReturnType<typeof startTestServer>>['server'];
-const owner: TestCtx = { base: '', cookie: '' };
-const dev: TestCtx = { base: '', cookie: '' };
+const owner: TestCtx = { base: '', token: '' };
+const dev: TestCtx = { base: '', token: '' };
 let workspaceId = '';
 let projectId = '';
 let taskId = '';

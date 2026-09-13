@@ -1,20 +1,21 @@
 import type { NextFunction, Request, Response } from 'express';
 import { User } from '../models/User.js';
 import { ApiError, asyncHandler } from '../utils/errors.js';
-import { extractToken, verifyToken } from '../utils/auth.js';
+import { authenticateClerkRequest } from '../utils/clerkAuth.js';
+import { env } from '../config/env.js';
 
-/** Verifies the JWT and attaches a lightweight req.user. Runs a DB lookup so revoked/deleted users are rejected. */
+/** Verifies the Clerk session token and attaches the local user. Runs a DB lookup so revoked/deleted users are rejected. */
 export const requireAuth = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
-  const token = extractToken(req);
-  if (!token) throw ApiError.unauthorized();
-  const payload = verifyToken(token);
-  if (!payload) throw ApiError.unauthorized('Session is invalid or expired');
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) throw ApiError.unauthorized('No authentication token provided');
+  if (!env.clerkSecretKey && !env.authTestMode) throw ApiError.serviceUnavailable('CLERK_SECRET_KEY is not configured on the server', 'AUTH_NOT_CONFIGURED');
+  const userId = await authenticateClerkRequest(req);
+  if (!userId) throw ApiError.unauthorized('Invalid or expired session — please sign in again');
 
-  const user = await User.findById(payload.sub)
-    .select('name username email avatarUrl bio skills githubUsername notificationPrefs +tokenVersion')
+  const user = await User.findById(userId)
+    .select('name username email avatarUrl bio skills githubUsername notificationPrefs')
     .lean();
   if (!user) throw ApiError.unauthorized('Account no longer exists');
-  if ((payload.ver ?? 0) !== (user.tokenVersion ?? 0)) throw ApiError.unauthorized('Session has been revoked, please sign in again');
 
   req.userId = String(user._id);
   req.user = {
@@ -30,13 +31,10 @@ export const requireAuth = asyncHandler(async (req: Request, _res: Response, nex
 
 /** Optional auth: attaches user when a valid session exists but does not fail otherwise. */
 export const optionalAuth = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
-  const token = extractToken(req);
-  if (!token) return next();
-  const payload = verifyToken(token);
-  if (!payload) return next();
-  const user = await User.findById(payload.sub).select('name username email avatarUrl +tokenVersion').lean();
+  const userId = await authenticateClerkRequest(req);
+  if (!userId) return next();
+  const user = await User.findById(userId).select('name username email avatarUrl').lean();
   if (!user) return next();
-  if ((payload.ver ?? 0) !== (user.tokenVersion ?? 0)) return next();
   req.userId = String(user._id);
   req.user = { id: String(user._id), name: user.name, username: user.username, email: user.email, avatarUrl: user.avatarUrl ?? '' };
   next();

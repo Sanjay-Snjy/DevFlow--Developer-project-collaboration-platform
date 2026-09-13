@@ -5,14 +5,13 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity, BarChart3, Bell, CheckCheck, ChevronsUpDown, Github, KanbanSquare, LayoutDashboard,
-  ListTodo, LogOut, Menu as MenuIcon, Moon, Plus, Search, Settings, Sun, X, FolderKanban, Bug, User as UserIcon, Users,
+  ListTodo, Menu as MenuIcon, Moon, Plus, Search, Settings, Sun, X, FolderKanban, Bug, Users,
 } from 'lucide-react';
 import useSWR from 'swr';
-import { SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
-import { Show } from '@/components/clerk-show';
+import { UserButton } from '@clerk/nextjs';
 import { LogoIcon } from '@/components/ui/logo-icon';
 import { api, qs, swrFetcher } from '@/lib/api';
-import { authKey, useAuth, useDebouncedValue, useThemeMode, useWorkspace } from '@/lib/hooks';
+import { useAuth, useDebouncedValue, useThemeMode, useWorkspace } from '@/lib/hooks';
 import type { WorkspaceSummary, NotificationItem } from '@/lib/types';
 import { initials, cx, timeAgo, avatarHue } from '@/lib/format';
 import { Avatar, Button, EmptyState, Field, Input, Menu, MenuItem, Modal, Spinner, useToast } from '@/components/ui';
@@ -20,8 +19,8 @@ import { Avatar, Button, EmptyState, Field, Input, Menu, MenuItem, Modal, Spinne
 type NavItem = { href: string; label: string; icon: React.ReactNode; roles?: string[] };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, mutate } = useAuth();
-  const { workspace, select } = useWorkspace();
+  const { user, error: authError, isLoading: authLoading, mutate: mutateAuth } = useAuth();
+  const { workspace } = useWorkspace();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const router = useRouter();
@@ -39,7 +38,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  if (!user) return <div className="center-box"><div className="spinner" /></div>;
+  if (!user) {
+    return (
+      <div className="center-box" style={{ minHeight: '100vh', flexDirection: 'column', gap: 16 }}>
+        <div className="spinner" />
+        {authError ? (
+          <>
+            <p style={{ color: 'var(--red)', fontSize: 14, marginTop: 12 }}>Could not connect to the server</p>
+            <p style={{ color: 'var(--text-3)', fontSize: 12, maxWidth: 360, textAlign: 'center', lineHeight: 1.5 }}>
+              {authError.message || 'The backend may not be running. Make sure it is listening on port 4000.'}
+            </p>
+            <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => mutateAuth()}>Retry</button>
+          </>
+        ) : (
+          <p style={{ color: 'var(--text-2)', fontSize: 14, marginTop: 12 }}>Connecting to server…</p>
+        )}
+      </div>
+    );
+  }
 
   const groups: Array<{ label: string; items: NavItem[] }> = [
     {
@@ -67,19 +83,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     },
   ];
 
-  const logout = async () => {
-    await api.post('/auth/logout');
-    mutate(undefined, true);
-    router.push('/login');  
-  };
-
   return (
     <div className="app-shell">
       {sidebarOpen && <div className="backdrop" onClick={() => setSidebarOpen(false)} />}
       <aside className={cx('sidebar', sidebarOpen && 'open')}>
         <div className="sidebar-head">
-          <LogoIcon size={26} />
-          <span className="logo-word">DevFlow</span>
+          <Link href="/" aria-label="Go to landing page" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <LogoIcon size={26} />
+            <span className="logo-word">DevFlow</span>
+          </Link>
           <button className="icon-btn mobile-menu-btn" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X /></button>
         </div>
 
@@ -126,34 +138,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button className="topbar-search" onClick={() => setSearchOpen(true)} role="search">
             <Search />
             <span>Search tasks, issues, projects…</span>
-            <span className="kbd" style={{ marginLeft: 'auto' }}>⌘K</span>
+            <span className="kbd" style={{ marginLeft: 'auto' }}>Ctrl+K</span>
           </button>
           <div className="topbar-right">
             <NotificationBell workspaceId={workspace?.id} />
             <ThemeButton mode={mode} setMode={setMode} />
-            <Show when="signed-in">
-              <UserButton afterSignOutUrl="/" />
-            </Show>
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <button className="btn btn-sm btn-ghost">Sign In</button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button className="btn btn-sm btn-primary">Sign Up</button>
-              </SignUpButton>
-            </Show>
-            <Menu
-              label="Account menu"
-              button={
-                <button className="icon-btn" aria-label="Account">
-                  <Avatar user={user} size="sm" />
-                </button>
-              }
-            >
-              <Link href="/settings"><MenuItem><UserIcon /> Profile & settings</MenuItem></Link>
-              <div className="menu-sep" />
-              <MenuItem className="danger" onClick={logout}><LogOut /> Sign out</MenuItem>
-            </Menu>
+            <UserButton afterSignOutUrl="/" />
           </div>
         </header>
 

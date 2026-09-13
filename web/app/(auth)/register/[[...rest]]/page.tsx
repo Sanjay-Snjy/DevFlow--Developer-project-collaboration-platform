@@ -1,7 +1,7 @@
 import { SignUp } from '@clerk/nextjs';
 import { AuthCardShell } from '@/components/auth-card-shell';
 
-export default function SignUpPage() {
+export default function RegisterPage() {
   return (
     <AuthCardShell title="Create your account" sub="Start planning with your team in minutes.">
       <SignUp

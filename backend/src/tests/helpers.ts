@@ -1,13 +1,15 @@
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-export type TestCtx = { base: string; cookie: string; userId?: string; me?: any };
+export type TestCtx = { base: string; token: string; userId?: string; me?: any };
 
-export function parseSetCookie(headers: Headers): string {
-  const raw = headers.getSetCookie?.() ?? [];
-  const setCookie = raw[0] ?? headers.get('set-cookie') ?? '';
-  const token = setCookie.split(';')[0]; // df_token=...
-  return token;
+/**
+ * Issues a fake-but-structurally-valid Clerk identity token understood by the API when
+ * AUTH_TEST_MODE=true (see utils/clerkAuth.ts → fakeIdentityFromToken).
+ */
+export function testToken(email: string, name: string, username?: string): string {
+  const payload = Buffer.from(JSON.stringify({ email, name, username })).toString('base64url');
+  return `dev_test_${payload}`;
 }
 
 export async function refreshMe(ctx: TestCtx) {
@@ -21,7 +23,7 @@ export async function refreshMe(ctx: TestCtx) {
 
 export async function api(ctx: TestCtx, path: string, options: RequestInit & { json?: unknown } = {}) {
   const headers: Record<string, string> = {};
-  if (ctx.cookie) headers.Cookie = ctx.cookie;
+  if (ctx.token) headers.Authorization = `Bearer ${ctx.token}`;
   if (options.json !== undefined) headers['Content-Type'] = 'application/json';
   const res = await fetch(`${ctx.base}${path}`, {
     ...options,
@@ -47,13 +49,14 @@ export async function startTestServer(): Promise<{ server: Server; base: string 
   return { server, base: `http://127.0.0.1:${port}` };
 }
 
-export async function register(ctx: TestCtx, name: string, username: string, email: string, password: string) {
-  const res = await api(ctx, '/api/auth/register', {
-    method: 'POST',
-    json: { name, username, email, password },
-  });
+/**
+ * "Registers" a user by presenting their test token to /api/auth/me, which provisions the
+ * local user + personal workspace on first sight (mirrors the Clerk first-sign-in flow).
+ */
+export async function register(ctx: TestCtx, name: string, username: string, email: string, _password: string) {
+  ctx.token = testToken(email, name, username);
+  const res = await refreshMe(ctx);
   if (res.status >= 400) throw new Error(`register failed ${res.status}: ${JSON.stringify(res.body)}`);
-  ctx.cookie = parseSetCookie(res.headers);
   const user = res.body?.data?.user;
   if (user) {
     ctx.userId = user.id;

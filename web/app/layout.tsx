@@ -19,6 +19,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ClerkProvider
+          // Keep client-side redirects pointing at the app's own auth pages. Without these
+          // Clerk falls back to /sign-in and /sign-up.
+          signInUrl="/login"
+          signUpUrl="/register"
           appearance={{
             layout: {
               unsafe_disableDevelopmentModeWarnings: true,
