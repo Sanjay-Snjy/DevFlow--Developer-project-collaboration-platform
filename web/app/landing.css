@@ -69,12 +69,18 @@
 
 /* While the landing page is mounted, take over the document canvas: html carries the
    overscroll color, and body must be transparent — an opaque body background would paint
-   ON TOP of the z-index:-1 gradient pseudo-element above and completely hide it. */
+   ON TOP of the z-index:-1 gradient pseudo-element above and completely hide it.
+   Scrollbar is hidden too (page stays fully scrollable — wheel/touch/keys all work). */
 html:has(.lp) {
   background: #05060a;
+  scrollbar-width: none; /* Firefox + Chrome 121+ */
 }
 html:has(.lp) body {
   background: transparent;
+}
+html:has(.lp)::-webkit-scrollbar {
+  display: none; /* Chrome, Edge, Safari */
+  width: 0;
 }
 
 /* ── Navigation ─────────────────────────────────────────────── */
