@@ -122,13 +122,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/settings" className="nav-link" style={{ padding: '6px 8px' }} onClick={() => setSidebarOpen(false)}>
             <Settings /> Settings
           </Link>
-          <div className="flex" style={{ padding: '6px 8px' }}>
-            <Avatar user={user} size="sm" />
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
-              <div style={{ color: 'var(--text-3)', fontSize: 11.5 }}>@{user.username}</div>
-            </div>
-          </div>
         </div>
       </aside>
 

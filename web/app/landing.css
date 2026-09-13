@@ -4,11 +4,77 @@
 
 .lp {
   --lp-max: 1160px;
-  background: var(--bg);
+
+  /* Landing is always dark, regardless of the visitor's saved theme —
+     these overrides sit on top of the global tokens for this subtree. */
+  --bg: #05060a;
+  --bg-2: #0a0d14;
+  --bg-3: #10141f;
+  --bg-4: #1a2030;
+  --border: rgba(148, 163, 184, 0.13);
+  --border-strong: rgba(148, 163, 184, 0.25);
+  --text: #e6e9f0;
+  --text-2: #9aa3b5;
+  --text-3: #6b7488;
+  --accent: #7c5cff;
+  --accent-soft: rgba(124, 92, 255, 0.13);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 8px 30px rgba(0, 0, 0, 0.45);
+
+  position: relative;
   color: var(--text);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+}
+
+/* ── Fixed animated gradient backdrop ─────────────────────────
+   A pseudo-element pinned to the viewport carries the gradient so the
+   background never scrolls with the page (content scrolls over it). It's
+   oversized so the drifting blobs can move without ever exposing edges.
+   The whole page then reads black → dark blue. */
+.lp::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  background:
+    radial-gradient(52% 46% at 24% 34%, rgba(15, 36, 98, 0.5), transparent 68%),
+    radial-gradient(46% 42% at 78% 66%, rgba(14, 32, 89, 0.45), transparent 70%),
+    radial-gradient(60% 52% at 50% 112%, rgba(3, 4, 8, 0.4), transparent 72%),
+    radial-gradient(36% 30% at 68% 22%, rgba(17, 39, 107, 0.28), transparent 70%),
+    linear-gradient(165deg, #010208 0%, #04081c 30%, #071233 58%, #0b1e4f 82%, #10275e 100%);
+  animation: lp-aurora 26s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes lp-aurora {
+  0% {
+    transform: translate3d(-3.5%, -2.5%, 0) scale(1.05) rotate(0.001deg);
+  }
+  50% {
+    transform: translate3d(2.5%, 2%, 0) scale(1.1) rotate(0.001deg);
+  }
+  100% {
+    transform: translate3d(3.5%, -1.5%, 0) scale(1.05) rotate(0.001deg);
+  }
+}
+
+/* Respect users who prefer reduced motion: freeze the drift, keep the gradient. */
+@media (prefers-reduced-motion: reduce) {
+  .lp::before {
+    animation: none;
+  }
+}
+
+/* While the landing page is mounted, take over the document canvas: html carries the
+   overscroll color, and body must be transparent — an opaque body background would paint
+   ON TOP of the z-index:-1 gradient pseudo-element above and completely hide it. */
+html:has(.lp) {
+  background: #05060a;
+}
+html:has(.lp) body {
+  background: transparent;
 }
 
 /* ── Navigation ─────────────────────────────────────────────── */
@@ -16,10 +82,20 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  /* Fully clear at the top of the page. The frosted-glass treatment fades in
+     via the .scrolled class (toggled by ScrollClassToggler). */
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.lp-nav.scrolled {
+  /* Plain rgba so no CSS-pipeline step can drop it. Blue-tinted so the bar reads
+     as glass over the aurora instead of a black stripe. */
+  background: rgba(9, 13, 30, 0.6);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.55);
 }
 .lp-nav-inner {
   max-width: var(--lp-max);
@@ -61,7 +137,7 @@
   position: relative;
   max-width: var(--lp-max);
   margin: 0 auto;
-  padding: 84px 24px 64px;
+  padding: 124px 24px 64px;
   text-align: center;
   overflow: visible;
 }
@@ -70,7 +146,7 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(560px 300px at 50% -80px, var(--accent-soft), transparent 70%);
+    radial-gradient(560px 300px at 50% -80px, rgba(124, 92, 255, 0.16), transparent 70%);
   z-index: -1;
 }
 .lp-hero h1 {
@@ -107,9 +183,10 @@
 .lp-shot {
   border: 1px solid var(--border-strong);
   border-radius: 14px;
-  background: var(--bg-2);
-  /* Always the light-theme shadow: the landing page is light-only. */
-  box-shadow: 0 24px 60px -18px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.03);
+  background: transparent;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(148, 163, 184, 0.06);
   overflow: hidden;
   font-size: 12px;
 }
@@ -119,20 +196,24 @@
   gap: 8px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-3);
+  background: rgba(255, 255, 255, 0.085);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
 }
-.lp-shot-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bg-4); border: 1px solid var(--border-strong); }
+.lp-shot-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, 0.564); border: 1px solid var(--border-strong); }
 .lp-shot-url {
   margin-left: 8px;
   flex: 1;
   max-width: 320px;
-  background: var(--bg);
+  background: rgba(255, 255, 255, 0.068);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 3px 10px;
   font-family: var(--mono);
   font-size: 10.5px;
-  color: var(--text-3);
+  color: rgb(255, 255, 255);
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
@@ -142,12 +223,13 @@
   width: 148px;
   flex: none;
   border-right: 1px solid var(--border);
-  background: var(--bg-2);
+  background: rgba(255, 255, 255, 0.085);
   padding: 10px 8px;
   display: none;
 }
 @media (min-width: 720px) { .lp-shot-side { display: block; } }
-.lp-shot-main { flex: 1; min-width: 0; padding: 14px; background: var(--bg); }
+.lp-shot-main { flex: 1; min-width: 0; padding: 14px; background: rgba(255, 255, 255, 0.085); backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px); }
 .lp-shot-navitem {
   display: flex;
   align-items: center;
@@ -177,13 +259,13 @@
   gap: 5px;
 }
 .lp-shot-colcount {
-  background: var(--bg-4);
+    background: transparent;
   border-radius: 8px;
   padding: 0 5px;
   font-size: 9px;
 }
 .lp-shot-card {
-  background: var(--bg-2);
+  background: rgba(255, 255, 255, 0.068);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 9px;
@@ -295,7 +377,9 @@
 @media (max-width: 860px) { .lp-bento { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 560px) { .lp-bento { grid-template-columns: 1fr; } }
 .lp-cell {
-  background: var(--bg-2);
+  background: rgba(255, 255, 255, 0.085);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 22px;
@@ -323,7 +407,9 @@
   place-items: center;
   margin-bottom: 14px;
   color: var(--accent);
-  background: var(--accent-soft);
+  background: rgba(255, 255, 255, 0.085);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   border: 1px solid var(--border);
 }
 .lp-cell-icon svg { width: 17px; height: 17px; }
@@ -335,7 +421,9 @@
 /* AI panel inside wide bento cell */
 .lp-ai-demo {
   margin-top: 18px;
-  background: var(--bg);
+  background: rgba(5, 5, 5, 0.289);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px;
@@ -359,7 +447,9 @@
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 12px;
-  background: var(--bg-4);
+  background: rgba(255, 255, 255, 0.085);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   color: var(--text-2);
 }
 
@@ -391,7 +481,9 @@
   height: 30px;
   border-radius: 8px;
   border: 1px solid var(--border-strong);
-  background: var(--bg-2);
+  background: rgba(255, 255, 255, 0.085);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   color: var(--text-2);
   font-weight: 800;
   font-size: 13px;
@@ -464,7 +556,9 @@
 .lp-footer {
   margin-top: 96px;
   border-top: 1px solid var(--border);
-  background: var(--bg-2);
+  background: rgba(1, 1, 1, 0.334);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
 }
 .lp-footer-inner {
   max-width: var(--lp-max);

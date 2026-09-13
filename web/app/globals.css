@@ -29,12 +29,10 @@
   --sidebar-w: 204px;
 }
 
-/* The light token set also applies to the marketing landing page, which is always light
-   regardless of the visitor's saved or system theme. Declaring the properties on `.lp`
-   (a descendant of <html>) means the landing page's whole subtree resolves light tokens
-   even while the document itself carries data-theme="dark". */
-html[data-theme='light'],
-.lp {
+/* Light token set for the in-app theme toggle. The marketing landing page no longer
+   rides on this rule — it forces its own dark tokens plus an animated gradient
+   backdrop in landing.css. */
+html[data-theme='light'] {
   --bg: #f5f6fa;
   --bg-2: #ffffff;
   --bg-3: #ffffff;

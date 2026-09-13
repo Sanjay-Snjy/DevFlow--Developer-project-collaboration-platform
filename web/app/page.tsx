@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Viewport } from 'next';
 import { LogoIcon } from '@/components/ui/logo-icon';
 import { LandingHeroActions, LandingNavActions } from '@/components/landing-actions';
+import { ScrollClassToggler } from '@/components/scroll-class';
 import {
   ArrowRight,
   Bell,
@@ -20,9 +21,9 @@ import {
 } from 'lucide-react';
 import './landing.css';
 
-/* The landing page is light-only (see the `.lp` token block in globals.css), so the
-   mobile browser chrome is tinted to match instead of the app's dark default. */
-export const viewport: Viewport = { themeColor: '#f5f6fa' };
+/* The landing page is always dark (see the `.lp` token block in landing.css), so the
+   mobile browser chrome is tinted to match its near-black base color. */
+export const viewport: Viewport = { themeColor: '#05060a' };
 
 /* ── Small helpers ──────────────────────────────────────────── */
 
@@ -148,6 +149,9 @@ function KanbanMock() {
 export default function HomePage() {
   return (
     <div className="lp">
+      {/* Toggle the nav's blur/tint once scrolling starts */}
+      <ScrollClassToggler selector=".lp-nav" className="scrolled" threshold={8} />
+
       {/* Navigation */}
       <header className="lp-nav">
         <div className="lp-nav-inner">
@@ -181,9 +185,6 @@ export default function HomePage() {
             so plans stay current without the ceremony.
           </p>
           <HeroActions />
-         {/*  <div className="lp-hero-note">
-            Free for teams up to 5 · No credit card required
-          </div>*/}
         </section>
 
         {/* Product screenshot mockup */}
@@ -204,7 +205,7 @@ export default function HomePage() {
             {/* AI — wide cell with mini demo */}
             <div className="lp-cell lp-cell-wide">
               <div className="lp-cell-icon"><Sparkles /></div>
-              <h3>AI that does the planning grunt work</h3>
+              <h3>AI that does the pl anning grunt work</h3>
               <p>
                 Break an epic into scoped subtasks, draft estimates and flag delivery risk before
                 the sprint starts. You approve; it doesn&rsquo;t guess.
@@ -301,22 +302,6 @@ export default function HomePage() {
               <p>Drag work into the sprint, let AI draft the breakdown, and start the clock. That&rsquo;s it.</p>
             </div>
           </div>
-        </section>
-
-        {/* Quote */}
-        <section className="lp-section">
-          <figure className="lp-quote">
-            <blockquote>
-              &ldquo;We replaced three tools with DevFlow. Planning meetings got shorter, and for the
-              first time the board actually reflects what&rsquo;s merged.&rdquo;
-            </blockquote>
-           {/* <figcaption>
-              <span className="lp-avatar">DR</span>
-              <span>
-                <strong style={{ color: 'var(--text)' }}>Dana Reyes</strong> · Engineering Lead, Corelab
-              </span>
-            </figcaption>*/}
-          </figure>
         </section>
       </main>
 
