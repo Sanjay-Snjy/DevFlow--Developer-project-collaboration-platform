@@ -1,321 +1,118 @@
-# DevFlow — Developer Project & Collaboration Platform
+# DevFlow
 
-DevFlow is a full-stack, production-oriented workspace for software teams: create
-workspaces, plan projects on Kanban boards, track tasks and issues, run sprints,
-collaborate in real time, keep an eye on GitHub repositories and turn ideas into
-structured work with AI — all backed by real APIs, a real database and realtime
-events. No mockups, no fake statistics.
+A full-stack project management platform for software teams — Kanban boards, tasks, issues, sprints, GitHub integration and AI-powered planning.
 
-> Everything in the UI is computed from live MongoDB data. Dragging a card on the
-> board updates the database and broadcasts the change to every connected client.
+![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)
+![Node.js](https://img.shields.io/badge/Node.js-18-green?logo=node.js)
+![MongoDB](https://img.shields.io/badge/MongoDB-7-green?logo=mongodb)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
 
+## Features
 
+- **Kanban boards** with drag & drop and real-time sync
+- **Tasks & issues** with subtasks, labels, priorities and comments
+- **Sprints** with velocity tracking and burndown
+- **GitHub integration** — link repos, view PRs, commits and issues
+- **AI assistant** — task breakdown, issue analysis and sprint planning
+- **Real-time updates** via WebSockets
+- **Role-based access** — Owner, Admin, Manager, Developer, Viewer
+- **Dark/Light theme**
 
----
+## Tech Stack
 
-## What's inside
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS |
+| Backend | Node.js, Express, TypeScript, Socket.IO |
+| Database | MongoDB with Mongoose |
+| AI | Python, FastAPI |
+| Auth | Clerk |
 
-- **Workspaces** with an invite system (shareable token links), role management and full RBAC:
-  `OWNER > ADMIN > MANAGER > DEVELOPER > VIEWER` — enforced on the API, never just in the UI.
-- **Projects** with keys (`DEV-101`), statuses, members, linked GitHub repositories.
-- **Tasks** with subtasks, labels, priorities, due dates, estimates, watchers and quick status edits.
-- **Kanban boards** with HTML5 drag & drop, reordering, filters and live sync via Socket.IO.
-- **Issue tracker** (bug / feature / improvement / question) with structured reproduction fields.
-- **Comments** with replies and `@username` mentions that notify the mentioned user.
-- **Sprints** (planned / active / completed), backlog management and velocity stats.
-- **Realtime** notifications, activity log and cache invalidation over authenticated WebSockets.
-- **GitHub integration** via the official REST API: connect with OAuth, browse/search
-  repositories, link them to projects, and view commits, issues, PRs and contributors.
-- **AI (FastAPI service)**: task breakdown, issue analysis, project summaries and sprint
-  planning. Provider-agnostic, gracefully disabled when unconfigured.
-- **Analytics** computed from actual database rows: completion trends, issue flow,
-  priority/status mixes, workload per member, project progress and sprint velocity.
-- **Search** across tasks, issues, projects, members and comments (⌘K anywhere).
-- **Settings**: profile, security (change password), appearance (dark/light/system),
-  notification preferences (persisted per user), workspace management and GitHub OAuth.
-- Dark-first design system with a light theme, responsive layout, loading/empty/error
-  states and keyboard-friendly controls.
+## Quick Start
 
-## Technology stack
+### Prerequisites
 
-| Layer     | Technology |
-|-----------|------------|
-| Frontend  | Next.js 14  · React 18 · TypeScript · Socket.IO client · CSS  |
-| Backend   | Node.js · Express · TypeScript · Zod validation · Socket.IO · JWT  + token-version revocation |
-| Database  | MongoDB (Mongoose), with indexes and aggregation for analytics |
-| AI        | Python · FastAPI · Pydantic (strict I/O validation) · pluggable LLM provider |
-| Infra     | Docker Compose (MongoDB) · CORS allow-list |
+- Node.js 18+
+- MongoDB (local or Docker)
+- A free [Clerk](https://clerk.com) account
 
-## Repository layout
-
-```
-.
-├── backend/            Node.js REST API + Socket.IO + seed + tests + Dockerfile
-│   └── src/
-│       ├── config/     env, db connection
-│       ├── constants/  shared enums (roles, statuses)
-│       ├── models/     Mongoose schemas + indexes
-│       ├── middleware/ auth (JWT), access (RBAC), security (rate limit, CSRF guard)
-│       ├── routes/     REST controllers
-│       ├── services/   analytics, activity, notifications, github, ai gateway
-│       ├── socket.ts   Socket.IO auth + rooms + event emit helper
-│       ├── seed.ts     demo data generator
-│       └── tests/      node:test suites (auth, RBAC, comment lifecycle)
-├── python-ai/          FastAPI AI service (structured responses, provider abstraction) + Dockerfile
-├── web/                Next.js app (all screens, UI kit, realtime hooks) + Dockerfile
-└── docker-compose.yml  MongoDB (default) + full stack via the `app` profile
-```
-
-> The backend compiles with `tsc` under `moduleResolution: NodeNext` and runs as plain
-> Node ESM (`node dist/index.js`) in production — no runtime transpiler needed.
-
-## Quick start
-
-Prerequisites: Node 18+, Python 3.10+, Docker (optional — any MongoDB works).
-
-### 1. Database
+### 1. Start MongoDB
 
 ```bash
-docker compose up -d mongodb     # or point MONGODB_URI at an existing MongoDB
+docker compose up -d mongodb
 ```
 
-### 0. Everything at once (Docker)
-
-If you prefer to run the whole stack in containers instead of four terminals:
-
-```bash
-docker compose --profile app up -d --build   # MongoDB + API (:4000) + AI (:8000) + Web (:3000)
-docker compose --profile app exec backend node dist/seed.js   # load demo data once
-```
-
-Open http://localhost:3000. Configuration is driven by a root `.env` — the
-variables and safe defaults are documented at the top of `docker-compose.yml`.
-
-> **The `app` profile needs the Clerk keys in the root `.env`.** `web/.env.local` is
-excluded from the Docker build context, so the frontend image can only get
-`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` from the build arg that `docker-compose.yml` reads out of
-`.env`. Without it the web image fails to build with an explicit error, and the backend
-refuses to boot without `CLERK_SECRET_KEY`. `docker compose up -d mongodb` (DB only) never
-needs either.
-
-### 2. Backend (Node API on :4000)
+### 2. Set up Backend
 
 ```bash
 cd backend
-cp .env.example .env             # edit values (MONGODB_URI, JWT_SECRET, CORS_ORIGINS, …)
+cp .env.example .env
+# Edit .env — add your Clerk secret key and MongoDB URI
 npm install
-npm run seed                     # demo workspace + users + projects + tasks + issues
-npm run dev                      # npx tsx src/index.ts (REST + Socket.IO)
+npm run seed    # Optional: load demo data
+npm run dev     # Starts on http://localhost:4000
 ```
 
-### 3. Web app (Next.js on :3000)
+### 3. Set up Frontend
 
 ```bash
 cd web
+cp .env.example .env.local
+# Edit .env.local — add your Clerk publishable key and secret key
 npm install
-cp .env.example .env.local       # defaults proxy /api to http://localhost:4000
-npm run dev
+npm run dev     # Starts on http://localhost:3000
 ```
 
-> **You must replace the Clerk keys in `web/.env.local`.** Clerk is the only way in, so
-> `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` have to be real values from
-> [dashboard.clerk.com](https://dashboard.clerk.com) → **API Keys**. If the placeholder
-> `pk_test_replace_me` is left in place Clerk never finishes loading, the sign-in buttons
-> on the landing page stay hidden, and `/dashboard` is unreachable. The backend needs the
-> same `CLERK_SECRET_KEY` in `backend/.env`.
+### 4. Open
 
-Open <http://localhost:3000> and click **Get started** (or **Sign in**).
+Go to **http://localhost:3000** and sign up / sign in with Clerk.
 
-### 4. Python AI service (FastAPI on :8000) — optional
+> Both `CLERK_SECRET_KEY` (backend) and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` (frontend) must come from the same [Clerk app](https://dashboard.clerk.com).
 
-```bash
-cd python-ai
-python -m venv .venv
-.venv/Scripts/pip install -r requirements.txt   # POSIX: .venv/bin/pip
-cp .env.example .env             # add an LLM provider key if you have one
-.venv/Scripts/python -m uvicorn app.main:app --port 8000
-```
+## Environment Variables
 
-The rest of DevFlow runs fine without the AI service or an AI provider — AI buttons
-show a clear “AI features are not configured” message instead of crashing.
+### Backend (`backend/.env`)
 
-## Authentication — where do I log in?
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `MONGODB_URI` | Yes | MongoDB connection string |
+| `CLERK_SECRET_KEY` | Yes | Clerk secret key for JWT verification |
+| `PUBLIC_API_URL` | Yes | Public URL (e.g. `http://localhost:4000`) |
+| `CORS_ORIGINS` | Yes | Allowed origins (e.g. `http://localhost:3000`) |
+| `GITHUB_CLIENT_ID` | No | GitHub OAuth — enables per-user repo connection |
+| `GITHUB_CLIENT_SECRET` | No | GitHub OAuth secret |
+| `GITHUB_TOKEN` | No | Server-level GitHub PAT for public repo access |
 
-**Clerk owns all sign-in.** There is no password stored in DevFlow and no `/login` API
-endpoint any more; the Node API only verifies the Clerk session JWT sent as a Bearer token.
+### Frontend (`web/.env.local`)
 
-| Route | What it is |
-|---|---|
-| `/login` | Sign-in page (Clerk `<SignIn>`), also reachable as `/sign-in` |
-| `/register` | Sign-up page (Clerk `<SignUp>`), also reachable as `/sign-up` |
-| `/` | Landing page — **Get started** / **Sign in** / **Start free** open Clerk's **modal**, no navigation |
-| `/dashboard` | Protected; anonymous visitors are redirected to `/login` |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
+| `CLERK_SECRET_KEY` | Yes | Clerk secret key |
+| `NEXT_PUBLIC_API_URL` | No | Leave empty to use the built-in proxy |
 
-The landing page never navigates away to authenticate: its CTAs are Clerk's
-`<SignInButton mode="modal">` / `<SignUpButton mode="modal">`, so visitors sign in or sign up
-in a popup and land on `/dashboard`. `/login` and `/register` remain as the fallback target for
-`clerkMiddleware`'s `auth.protect()` when an anonymous visitor opens a protected deep link.
+## Deploy
 
-Every other route is protected by `web/middleware.ts`. The redirect target is pinned in code
-(`clerkMiddleware` options + `<ClerkProvider>`), so it does not depend on
-`NEXT_PUBLIC_CLERK_SIGN_IN_URL` being set.
+| Component | Platform | Notes |
+|-----------|----------|-------|
+| Frontend | [Vercel](https://vercel.com) | Free tier, auto-deploys from GitHub |
+| Backend | [Render](https://render.com) | Free tier (spins down after inactivity) |
+| Database | [MongoDB Atlas](https://cloud.mongodb.com) | Free M0 cluster (512MB) |
 
-> **`/login` and `/register` must stay catch-all routes.** Clerk's `<SignIn>`/`<SignUp>`
-> throw *"component is not configured correctly"* unless they are rendered from a catch-all
-> segment (hence `app/(auth)/login/[[...rest]]/page.tsx`), and the middleware must treat the
-> whole subtree as public — which is why the public routes use `/login/:path*` rather than an
-> exact `/login` match. Breaking either half re-introduces that error. On first successful sign-in the API
-provisions a local `User` row (matched on verified email, so pre-existing rows are adopted)
-plus a personal workspace. Profile, password and MFA changes are delegated to Clerk via
-**Settings → Security**. Manage users in the [Clerk dashboard](https://dashboard.clerk.com).
+1. Create a MongoDB Atlas cluster → copy the connection string
+2. Deploy backend on Render → set `MONGODB_URI` and other env vars
+3. Deploy frontend on Vercel → set `NEXT_PUBLIC_API_URL` to your Render URL + Clerk keys
+4. Update Clerk dashboard → add your Vercel URL to allowed redirect URLs
 
-### Seeded demo profiles
-
-`npm run seed` creates local *profile* rows (no passwords) in the **Nebula Labs** demo
-workspace — `DEV` (DevFlow Platform), `MOB` (Mobile App) and `EC` (E-Commerce API)
-projects, with sprints, tasks, issues and comments. Because Clerk owns identity, a seeded
-profile becomes yours when you sign up with a Clerk account using that **exact email**;
-otherwise you start with your own personal workspace. The seed never runs automatically and
-never runs in production.
-
-## Environment variables
-
-**backend/.env** (see `backend/.env.example` for all)
-
-| Variable | Purpose |
-|---|---|
-| `MONGODB_URI` | MongoDB connection string |
-| `CLERK_SECRET_KEY` | **Required.** Verifies Clerk session JWTs and calls the Clerk Backend API |
-| `AUTH_TEST_MODE` | Test-only: accept `dev_test_` tokens from the test helpers |
-| `JWT_SECRET` | No longer signs auth tokens. Still used as the AES-256 key that encrypts stored GitHub OAuth tokens, so rotating it invalidates those connections |
-| `PORT` | API port (default 4000) |
-| `PUBLIC_API_URL` | Public API origin (used for OAuth callbacks) |
-| `CORS_ORIGINS` | Comma-separated allowed web origins (e.g. `http://localhost:3000`) |
-| `GITHUB_TOKEN` | Optional server-level GitHub token (rate limits, private access) |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth app (user “Connect GitHub”) |
-| `AI_API_URL` | Python service base URL, e.g. `http://localhost:8000` |
-| `AI_SERVICE_KEY` | Shared secret the Python service requires (`X-Service-Key` header) |
-| `COOKIE_SECURE` | Set `true` behind HTTPS so the auth cookie is Secure-only |
-| `COOKIE_DOMAIN` | Optional cookie domain (only needed for cross-subdomain deployments) |
-| `TRUST_PROXY` | `true` behind a reverse proxy (correct client IPs for rate limiting) |
-| `NODE_ENV` | `production` in production builds (also disables dev-only CSRF origins) |
-
-**web/.env.local** — `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`
-(**required**, the app cannot authenticate without them), plus `NEXT_PUBLIC_API_URL` (leave
-empty for the same-origin proxy) and `API_PROXY_TARGET` (default `http://localhost:4000`).
-The `NEXT_PUBLIC_CLERK_SIGN_IN_URL` / `_SIGN_UP_URL` / `_FALLBACK_REDIRECT_URL` hints are
-optional and default to `/login`, `/register` and `/dashboard`.
-
-**python-ai/.env** — `AI_PROVIDER` (`auto` / `openai` / `none`), `AI_API_KEY`,
-`AI_API_BASE`, `AI_MODEL`. Any OpenAI-compatible endpoint works (OpenAI, local
-vLLM/Ollama/LM Studio, …). No key → clean “AI not configured” responses. See
-`python-ai/.env.example`.
-
-## Realtime events (Socket.IO, `/socket.io`)
-
-Authenticated via the same httpOnly cookie. Rooms: `user:<id>`, `workspace:<id>`,
-`project:<id>`. Events: `task:created|updated|moved|deleted`, `issue:created|updated|deleted`,
-`comment:created|updated|deleted`, `sprint:created|updated|deleted`,
-`project:created|updated|deleted`, `notification:created`, `membership.changed`,
-`workspace:changed`. The web client invalidates the exact SWR caches each event touches,
-so two engineers editing the same board see each other instantly without a refresh.
-
-## GitHub integration
-
-Two independent settings in `backend/.env`:
-
-| Setting | Effect |
-|---|---|
-| `GITHUB_TOKEN` (fine-grained PAT, repo read) | **Server-level** token. Lets every user read public repo data and the “Load repositories” list without doing anything. Optional — public repos also work unauthenticated (lower rate limits). |
-| `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` + `PUBLIC_API_URL` | **Per-user OAuth**. Shows “Connect GitHub” in Settings → Integrations; connected users see their own repos (incl. private, if scoped). Callback: `{PUBLIC_API_URL}/api/github/callback`. |
-
-Create the fine-grained PAT at https://github.com/settings/tokens → “Fine-grained
-token” with **Metadata: Read** (+ **Contents: Read** for commit data). Register the
-OAuth app at https://github.com/settings/developers with the callback URL above.
-Then open a project → **GitHub → Link repository** to view commits, open issues,
-PRs and contributors — all proxied through the backend with rate-limit handling.
-
-## AI architecture
+## Project Structure
 
 ```
-Web (React)  →  Node API (/api/ai/*)  →  FastAPI (python-ai)  →  LLM provider
+├── backend/       Node.js API + Socket.IO + tests
+├── web/           Next.js frontend
+├── python-ai/     FastAPI AI service (optional)
+└── docker-compose.yml
 ```
 
-The Node layer gathers real project context (backlog, activity, workload) from
-MongoDB, the Python service validates every request *and* re-validates the LLM output
-against Pydantic models, so the frontend always receives strictly structured JSON
-(`GeneratedTask[]`, `possibleCauses[]`, `debuggingSteps[]`, `suggestedTasks[]`, …).
-The provider abstraction means you can use an OpenAI-compatible endpoint or a local
-model without touching app code.
+## License
 
-## Tests & quality
-
-```bash
-cd backend && npm test      # 22 integration tests: clerk-first-sight provisioning, RBAC, task/issue + comment lifecycle flows
-cd web && npm run typecheck # tsc --noEmit
-cd web && npm run build     # production build incl. prerender of all routes
-```
-
-Security: Clerk owns password hashing, MFA and session revocation (the API re-checks the
-session is still active on every request), Zod input validation everywhere, workspace/project
-authorization middleware, per-route RBAC checks server-side, helmet headers, CORS
-allow-list, rate limiters (API + AI + GitHub) and no secrets in the client bundle.
-
-## Deployment
-
-Every component ships a `Dockerfile`, and `docker-compose.yml` can run the full
-stack (`docker compose --profile app up -d --build`). The same images deploy to
-any Docker host (Fly.io, Render, EC2 + ECS, a VPS, …).
-
-Two supported network topologies:
-
-1. **Single origin (recommended)** — one domain serves the web app and the API.
-   Next.js rewrites proxy `/api` and `/socket.io` to the backend, so the httpOnly
-   auth cookie stays first-party and CORS is trivial. Build the web app with
-   `NEXT_PUBLIC_API_URL` **empty** and set `API_PROXY_TARGET` to the backend URL.
-2. **Split origins** — web on `app.example.com`, API on `api.example.com`.
-   Build the web app with `NEXT_PUBLIC_API_URL=https://api.example.com`, and on the
-   backend set `CORS_ORIGINS=https://app.example.com` and `COOKIE_DOMAIN=.example.com`.
-
-Production checklist:
-
-- Serve HTTPS everywhere and set `COOKIE_SECURE=true` on the backend.
-- Set `TRUST_PROXY=true` on the backend behind a reverse proxy (rate-limit IPs).
-- Use MongoDB Atlas (or a managed DB) for `MONGODB_URI`; keep `JWT_SECRET` long and
-  secret (the compose example value is a placeholder).
-- `NODE_ENV=production` and point `PUBLIC_API_URL` at the real public API origin
-  (used by GitHub OAuth redirects).
-- Give each service its own hostname: web → Next.js host, backend → Node host,
-  python-ai → FastAPI host, and point `AI_API_URL` at it.
-- Never run `npm run seed` against production — it is for local demo data only.
-
-### Managed-platform notes
-
-- **Web**: Vercel or any Node host — build once, `npm start`. `API_PROXY_TARGET`
-  may point at the backend host when using the single-origin topology.
-- **Backend**: Node host (Render/Fly/EC2) serving REST + Socket.IO; Socket.IO needs
-  sticky sessions when scaled beyond one instance (or the Redis adapter).
-- **Python**: FastAPI host (Render/Fly); set `AI_API_URL` on the backend accordingly.
-- **MongoDB**: Atlas with the connection string in `MONGODB_URI`.
-- Environment is 100% variable-driven; nothing is hardcoded to `localhost`.
-
-## Known limitations & next steps
-
-- GitHub OAuth state is stored in-memory (single instance) — swap to Redis for
-  multi-instance deploys. Server-level `GITHUB_TOKEN` avoids the per-user step if
-  you only need public-repo browsing.
-- File attachments and full password-reset-by-email are not implemented (a reset via
-  email provider can be added on top of the existing password endpoint).
-- Sprints currently use one “active” sprint per project (previous active is
-  auto-completed), matching a simple two-week cadence.
-- Socket.IO is not yet scaled across multiple Node instances (use the Redis adapter
-  when scaling out).
-
-## The build process
-
-Phases followed: project setup + database + auth → workspaces/RBAC/invitations →
-projects/tasks/issues/comments → board + filters → realtime/notifications/activity →
-GitHub → analytics/sprints → FastAPI AI service + AI panels → security/accessibility
-hardening → tests → documentation. Every phase was typechecked and smoke-tested
-before moving on, and the repository was left in a working, runnable state (nothing
-was ever pushed to any remote).
+MIT

@@ -18,6 +18,14 @@ import aiRouter from './ai.js';
 
 export const apiRouter = Router();
 
+// /github and /ai MUST mount before the bare full-path routers below (comments, sprints,
+// activity, search, analytics, dashboard, tasks/issues collection routers): those apply a
+// pathless `router.use(requireAuth)` which runs for EVERY falling-through request — even
+// ones the router never handles — and would 401 the OAuth /callback (a browser redirect
+// that cannot carry an Authorization header).
+apiRouter.use('/github', githubRouter);
+apiRouter.use('/ai', aiRouter);
+
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/me', meRouter);
 
@@ -38,6 +46,3 @@ apiRouter.use('/notifications', notificationsRouter);
 apiRouter.use(searchRouter);
 apiRouter.use(analyticsRouter);
 apiRouter.use(dashboardRouter);
-
-apiRouter.use('/github', githubRouter);
-apiRouter.use('/ai', aiRouter);
