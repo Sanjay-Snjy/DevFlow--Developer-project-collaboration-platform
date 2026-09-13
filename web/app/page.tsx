@@ -163,8 +163,6 @@ export default function HomePage() {
           <nav className="lp-nav-links">
             <a className="lp-nav-link" href="#features">Features</a>
             <a className="lp-nav-link" href="#workflow">Workflow</a>
-            <a className="lp-nav-link" href="#faq">Pricing</a>
-            <a className="lp-nav-link" href="#faq">Docs</a>
           </nav>
 
           <div className="lp-nav-cta">
